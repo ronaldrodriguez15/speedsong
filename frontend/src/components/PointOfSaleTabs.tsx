@@ -115,10 +115,6 @@ export function PointOfSaleTabs() {
   }
 
   return <section className="card overflow-hidden">
-    <div className="border-b border-slate-100 p-5 dark:border-slate-800 sm:p-6">
-      <h2 className="flex items-center gap-2 text-lg font-semibold"><Store size={22} className="text-brand-500 dark:text-brand-400" />Cierre por punto de venta</h2>
-      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Las ventas de cada sede, claras y en un solo lugar.</p>
-    </div>
     <div role="tablist" aria-label="Puntos de venta" className="flex gap-2 overflow-x-auto border-b border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-800/40">
       {points.map((point, index) => <button
         key={point.id}
@@ -164,7 +160,7 @@ export function PointOfSaleTabs() {
           {Object.keys(visibleSummary.other_methods).length > 0 && <div className="rounded-xl bg-slate-50 p-4 dark:bg-slate-800"><p className="mb-2 text-sm font-semibold">Otros medios de pago</p>{Object.entries(visibleSummary.other_methods).map(([name, amount]) => <div key={name} className="flex justify-between gap-4 py-1 text-sm"><span>{name || "Sin identificar"}</span><strong>{money(amount)}</strong></div>)}</div>}
           {visibleSummary.payment_difference !== 0 && <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">El total de ventas y los pagos registrados tienen una diferencia de {money(visibleSummary.payment_difference)}. Revisa los pagos en el punto de venta.</p>}
           {visibleSummary.sale_count === 0 && <p className="py-3 text-center text-sm text-slate-500 dark:text-slate-400">No hay ventas completadas en este período.</p>}
-          <div className="flex flex-wrap justify-between gap-3 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400"><p className="max-w-xl">Transferencia incluye consignaciones. No incluye ventas suspendidas, anuladas ni abonos a créditos anteriores.</p><p className="flex items-center gap-1.5"><ArrowDownLeft size={14} />Actualizado {new Date(visibleSummary.updated_at).toLocaleTimeString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit" })} · Colombia</p></div>
+          <div className="flex flex-wrap justify-between gap-3 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400"><p className="flex items-center gap-1.5"><ArrowDownLeft size={14} />Actualizado {new Date(visibleSummary.updated_at).toLocaleTimeString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit" })} · Colombia</p></div>
         </div>}
     </div>)}
     {detail && <SalesRecordsModal key={`${detail.point}:${detail.snapshot}:${detail.method}`} selection={detail} onClose={() => setDetail(null)} />}

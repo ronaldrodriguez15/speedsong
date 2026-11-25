@@ -29,7 +29,7 @@ export function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
   useEffect(() => {
     const outside = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setPanel(null); };
     const keys = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" && window.matchMedia("(min-width: 768px)").matches) {
         event.preventDefault(); setPanel("search"); search.current?.focus();
       }
       if (event.key === "Escape") {
@@ -41,12 +41,12 @@ export function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
     document.addEventListener("pointerdown", outside); document.addEventListener("keydown", keys);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", keys); };
   }, [panel]);
-  return <header ref={root} onBlur={event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setPanel(null); }} className="sticky top-0 z-30 grid min-h-[82px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 md:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto] border-b border-white/15 bg-brand-500 text-white px-4 shadow-[0_4px_30px_-20px_#64748b] backdrop-blur-xl sm:px-7 lg:px-9">
+  return <header ref={root} onBlur={event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setPanel(null); }} className="sticky top-0 z-30 grid min-h-16 md:min-h-[82px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 md:py-3 md:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto] border-b border-white/15 bg-brand-500 text-white px-4 shadow-[0_4px_30px_-20px_#64748b] backdrop-blur-xl sm:px-7 lg:px-9">
     <div className="contents">
       <div className="flex items-center gap-2 lg:hidden">
       <button onClick={onMenuClick} aria-label="Abrir menú" className="navbar-icon lg:hidden"><Menu size={21}/></button>
       </div>
-      <div className="relative order-3 col-span-2 w-full md:order-none md:col-span-1 md:max-w-sm">
+      <div className="relative hidden w-full md:block md:max-w-sm">
         <div className="flex items-center gap-2 rounded-2xl border border-slate-200/70 dark:border-slate-700/70 bg-slate-50/80 dark:bg-slate-800/80 px-3 py-2.5 focus-within:border-brand-300 dark:focus-within:border-brand-600 focus-within:bg-white dark:focus-within:bg-slate-900 focus-within:ring-4 focus-within:ring-brand-50 dark:focus-within:ring-brand-900">
           <Search size={18} className="shrink-0 text-brand-500 dark:text-brand-400"/>
           <input ref={search} aria-label="Buscar módulo" aria-expanded={panel === "search"} aria-controls="module-search" value={query} onFocus={() => setPanel("search")} onChange={e => { setQuery(e.target.value); setPanel("search"); }} placeholder="Buscar módulo..." className="min-w-0 w-full bg-transparent text-sm text-slate-800 outline-none dark:text-slate-100"/>

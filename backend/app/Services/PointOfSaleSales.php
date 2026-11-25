@@ -8,8 +8,9 @@ use RuntimeException;
 
 class PointOfSaleSales
 {
-    public function daily(array $point, string $date, ?string $endDate = null): array
+    public function daily(array $point, string $date, ?string $endDate = null, bool $includeProducts = false): array
     {
+        $ranking = $includeProducts ? new ProductRanking() : null;
         $endDate ??= $date;
         $totals = ['cash' => 0, 'transfer' => 0, 'nequi' => 0, 'credit' => 0, 'other' => 0];
         $other = [];
@@ -49,6 +50,7 @@ class PointOfSaleSales
                 }
                 $total += $this->cents($sale['total']);
                 $count++;
+                $ranking?->add($sale);
                 $recordPayments = [];
                 $paymentNames = [];
                 foreach ($sale['payments'] as $payment) {
@@ -93,6 +95,7 @@ class PointOfSaleSales
             'payment_difference' => ($total - array_sum($totals)) / 100,
             'records' => $records,
             'updated_at' => now('America/Bogota')->toIso8601String(),
+            ...($ranking ? ['ranking' => $ranking->result()] : []),
         ];
     }
 
