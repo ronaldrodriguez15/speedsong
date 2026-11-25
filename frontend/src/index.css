@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Poppins, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #18324b;
+  background: #f7faff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+:root.dark { color: #e2e8f0; background: #020617; color-scheme: dark; }
+.dark .Toastify__toast { background: #0f172a; color: #e2e8f0; border-color: #334155; }
+.dark .Toastify__close-button { color: #cbd5e1; }
+.dark .Toastify__progress-bar-theme--light { background: #45adf5; }
+.dark ::selection { background: #164a83; color: #eff8ff; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button:focus-visible, input:focus-visible { outline: 3px solid rgba(35, 136, 232, .22); outline-offset: 2px; }
+::selection { background: #dceeff; color: #164a83; }
+
+@layer components {
+  .navbar-icon { @apply inline-flex items-center justify-center rounded-xl p-2.5 text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white disabled:opacity-40; }
+  .card { @apply rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-soft; }
+  .field { @apply w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 outline-none transition placeholder:text-slate-400 dark:placeholder:text-slate-400 focus:border-brand-400 focus:ring-4 focus:ring-brand-50 dark:focus:ring-brand-900; }
+  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60; }
+  .icon-button { @apply inline-flex items-center justify-center rounded-xl p-2.5 text-slate-500 dark:text-slate-400 transition hover:bg-brand-50 dark:hover:bg-brand-900 hover:text-brand-600 dark:hover:text-brand-300 disabled:opacity-40; }
+  .btn-quiet { @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40; }
+  .menu-item { @apply flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-slate-600 dark:text-slate-300 transition hover:bg-brand-50 dark:hover:bg-brand-900 hover:text-brand-600 dark:hover:text-brand-300 disabled:opacity-50; }
+  .dropdown-panel { @apply absolute overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-[0_18px_60px_-12px_rgba(15,23,42,0.22)]; }
+}
+
+button { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled) { cursor: pointer; }
+a:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
+.btn-primary { background-image: linear-gradient(135deg, rgba(255,255,255,.12), transparent); box-shadow: 0 4px 12px -5px #2388e880; }
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 7px 18px -6px #2388e899; }
+.btn-primary:active:not(:disabled) { transform: translateY(0); }
+.Toastify__toast { border: 1px solid #e2e8f0; border-radius: 16px; font-family: inherit; font-size: 14px; box-shadow: 0 12px 36px -12px #33415540; }
+.Toastify__progress-bar { height: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
