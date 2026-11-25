@@ -25,6 +25,7 @@ vm.runInNewContext(compiled, {
   require: name => name === 'axios' ? axios : { toast },
   window: { dispatchEvent: event => events.push(event) },
   crypto: webcrypto, Event,
+  setTimeout: callback => setTimeout(callback, 5), clearTimeout,
   CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options.detail; } },
 });
 const { api } = exportsObject;
@@ -69,5 +70,34 @@ const respond = (status, data) => {
   await api.get('/users', { feedback: false });
   assert.equal(calls.length, 0);
   assert.equal(events.length, 0);
-  console.log('PASS: create, validation error, guest session, cancellation, CSRF and silent requests.');
+  reset();
+  let attempts = 0;
+  api.defaults.adapter = async config => {
+    attempts++;
+    const response = { status: attempts === 1 ? 429 : 200, data: {}, config, headers: { 'retry-after': '1' }, statusText: '' };
+    if (response.status === 429) throw new axios.AxiosError('Limited', 'ERR_BAD_REQUEST', config, null, response);
+    return response;
+  };
+  await api.get('/points-of-sale/villa/sales', { feedback: false });
+  assert.equal(attempts, 2);
+  assert.equal(events.length, 0);
+
+  attempts = 0;
+  api.defaults.adapter = async config => {
+    attempts++;
+    throw new axios.AxiosError('Limited', 'ERR_BAD_REQUEST', config, null, { status: 429, data: {}, config, headers: { 'retry-after': '1' } });
+  };
+  await assert.rejects(api.get('/points-of-sale/villa/sales', { feedback: false }));
+  assert.equal(attempts, 3, 'Retries must be bounded');
+  attempts = 0;
+  await assert.rejects(api.post('/login', {}, { feedback: false }));
+  assert.equal(attempts, 1, 'Do not retry login or writes');
+
+  attempts = 0;
+  const controller = new AbortController();
+  const pending = api.get('/points-of-sale/villa/sales', { feedback: false, signal: controller.signal });
+  setTimeout(() => controller.abort(), 1);
+  await assert.rejects(pending, error => axios.isCancel(error));
+  assert.equal(attempts, 1, 'Navigation cancels pending retries');
+  console.log('PASS: feedback, bounded rate-limit retries, cancellation and login isolation.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

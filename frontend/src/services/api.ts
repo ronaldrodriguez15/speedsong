@@ -4,6 +4,7 @@ declare module "axios" {
   interface AxiosRequestConfig {
     feedback?: false | { pending?: string; success?: string; ignoreUnauthorized?: boolean; history?: boolean };
     toastId?: Id;
+    rateLimitRetries?: number;
   }
 }
 export interface ApiNotice { id: string; message: string; type: "success" | "error"; time: number; read: boolean; }
@@ -42,8 +43,34 @@ api.interceptors.response.use(response => {
     if (config.feedback?.history !== false) publish(message, "success");
   }
   return response;
-}, error => {
+}, async error => {
   const config = error.config;
+  // Retry only read-only POS queries, respecting the server's cooldown.
+  if (error.response?.status === 429 && config?.method === 'get'
+    && config.url?.startsWith('/points-of-sale/') && (config.rateLimitRetries ?? 0) < 2
+    && !config.signal?.aborted) {
+    const retryAfter = error.response.headers?.['retry-after'];
+    const seconds = Number(retryAfter);
+    const delay = retryAfter == null ? 60000 : Number.isFinite(seconds)
+      ? Math.max(1000, seconds * 1000) : Math.max(1000, Date.parse(retryAfter) - Date.now());
+    if (Number.isFinite(delay) && delay <= 120000) {
+      if (config.toastId !== undefined) toast.dismiss(config.toastId);
+      await new Promise<void>((resolve, reject) => {
+        const abort = () => {
+          clearTimeout(timer);
+          config.signal?.removeEventListener('abort', abort);
+          reject(new axios.CanceledError());
+        };
+        const timer = setTimeout(() => {
+          config.signal?.removeEventListener('abort', abort);
+          resolve();
+        }, delay + 250);
+        config.signal?.addEventListener('abort', abort, { once: true });
+        if (config.signal?.aborted) abort();
+      });
+      return api.request({ ...config, rateLimitRetries: (config.rateLimitRetries ?? 0) + 1 });
+    }
+  }
   const canceled = axios.isCancel(error);
   const expectedGuest = error.response?.status === 401 && config?.feedback?.ignoreUnauthorized;
   if (canceled || expectedGuest) {

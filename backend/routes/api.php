@@ -15,11 +15,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
     Route::get('/cash-closings', [CashClosingController::class, 'index']);
     Route::get('/points-of-sale', [PointOfSaleController::class, 'index']);
-    Route::get('/points-of-sale/{point}/receivables', [ReceivablesController::class, 'index'])->middleware('throttle:30,1');
-    Route::get('/points-of-sale/{point}/receivables/{customer}/credits', [ReceivablesController::class, 'credits'])->middleware('throttle:60,1');
-    Route::get('/points-of-sale/{point}/receivables/{customer}/report', [ReceivablesController::class, 'report'])->middleware('throttle:30,1');
-    Route::get('/points-of-sale/{point}/top-products', [TopProductsController::class, 'index'])->middleware('throttle:30,1');
-    Route::get('/points-of-sale/{point}/sales', [PointOfSaleController::class, 'sales'])->middleware('throttle:30,1');
-    Route::get('/points-of-sale/{point}/sales/records', [PointOfSaleController::class, 'records'])->middleware('throttle:60,1');
+    Route::get('/points-of-sale/{point}/receivables', [ReceivablesController::class, 'index'])->middleware('throttle:pos-reports');
+    Route::get('/points-of-sale/{point}/receivables/{customer}/credits', [ReceivablesController::class, 'credits'])->middleware('throttle:pos-reports');
+    Route::get('/points-of-sale/{point}/receivables/{customer}/report', [ReceivablesController::class, 'report'])->middleware('throttle:pos-reports');
+    Route::get('/points-of-sale/{point}/top-products', [TopProductsController::class, 'index'])->middleware('throttle:pos-reports');
+    Route::get('/points-of-sale/{point}/sales', [PointOfSaleController::class, 'sales'])->middleware('throttle:pos-reports');
+    Route::get('/points-of-sale/{point}/sales/records', [PointOfSaleController::class, 'records'])->middleware('throttle:pos-reports');
     Route::post('/cash-closings', [CashClosingController::class, 'store']);
 });
