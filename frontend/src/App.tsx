@@ -1,3 +1,4 @@
+import { Inventario } from "./pages/Inventario";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/cierre" element={<MainLayout><Cierre /></MainLayout>} />
         <Route path="/" element={<MainLayout><Panel /></MainLayout>} />
         <Route path="/usuarios" element={<MainLayout><Usuarios /></MainLayout>} />
+        <Route path="/inventario" element={<MainLayout><Inventario /></MainLayout>} />
         <Route path="/cartera" element={<MainLayout><Cartera /></MainLayout>} />
         <Route path="/mas-vendidos" element={<MainLayout><MasVendidos /></MainLayout>} />
       </Route>

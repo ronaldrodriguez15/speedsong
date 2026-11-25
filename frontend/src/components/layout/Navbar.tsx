@@ -1,3 +1,5 @@
+import { Boxes } from "lucide-react";
+import { ChristmasLights } from '../ui/ChristmasDecor';
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
@@ -7,8 +9,9 @@ import { useNotifications } from "../../contexts/NotificationContext";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { ClipboardCheck } from "lucide-react";
 const links = [
-  { name: "Cierre", path: "/cierre", icon: ClipboardCheck },
   { name: "Panel principal", path: "/", icon: LayoutDashboard },
+  { name: "Inventario", path: "/inventario", icon: Boxes },
+  { name: "Cierre", path: "/cierre", icon: ClipboardCheck },
   { name: "Usuarios", path: "/usuarios", icon: Users },
   { name: "Cartera", path: "/cartera", icon: Wallet },
   { name: "Más vendidos", path: "/mas-vendidos", icon: TrendingUp },
@@ -42,6 +45,7 @@ export function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", keys); };
   }, [panel]);
   return <header ref={root} onBlur={event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setPanel(null); }} className="sticky top-0 z-30 grid min-h-16 md:min-h-[82px] grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2 md:py-3 md:grid-cols-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto] border-b border-white/15 bg-brand-500 text-white px-4 shadow-[0_4px_30px_-20px_#64748b] backdrop-blur-xl sm:px-7 lg:px-9">
+    <ChristmasLights />
     <div className="contents">
       <div className="flex items-center gap-2 lg:hidden">
       <button onClick={onMenuClick} aria-label="Abrir menú" className="navbar-icon lg:hidden"><Menu size={21}/></button>

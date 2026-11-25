@@ -33,6 +33,46 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(35, 136, 232
 }
 
 button { -webkit-tap-highlight-color: transparent; }
+.christmas-lights {
+  position: absolute;
+  inset: auto 0 -12px;
+  height: 16px;
+  display: flex;
+  justify-content: space-around;
+  border-top: 2px solid #235c50;
+  pointer-events: none;
+  user-select: none;
+}
+.christmas-lights span {
+  position: relative;
+  width: 7px;
+  height: 11px;
+  border-radius: 3px 3px 6px 6px;
+  background: var(--bulb-color);
+  color: var(--bulb-color);
+  box-shadow: 0 2px 8px 1px currentColor;
+  animation: christmas-glow 4s ease-in-out infinite alternate;
+}
+.christmas-lights span::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 1px;
+  width: 5px;
+  height: 4px;
+  border-radius: 1px;
+  background: #235c50;
+}
+@keyframes christmas-glow {
+  from { box-shadow: 0 2px 4px currentColor; }
+  to { box-shadow: 0 2px 10px 2px currentColor; }
+}
+@media (max-width: 639px) {
+  .christmas-lights span:nth-child(even) { display: none; }
+}
+@media print {
+  .christmas-lights, .christmas-greeting { display: none; }
+}
 button:not(:disabled) { cursor: pointer; }
 a:focus-visible { outline: 3px solid #93c5fd; outline-offset: 3px; }
 .btn-primary { background-image: linear-gradient(135deg, rgba(255,255,255,.12), transparent); box-shadow: 0 4px 12px -5px #2388e880; }

@@ -1,3 +1,5 @@
+import { Boxes } from "lucide-react";
+import { ChristmasGreeting } from '../ui/ChristmasDecor';
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Users, Wallet, TrendingUp, X, LogOut, PanelLeftClose } from "lucide-react";
 import { Logo } from "../ui/Logo";
@@ -15,6 +17,7 @@ interface SidebarProps {
 
 const navigation = [
   { label: "Panel", path: "/", icon: LayoutDashboard },
+  { label: "Inventario", path: "/inventario", icon: Boxes },
   { label: "Usuarios", path: "/usuarios", icon: Users },
   { label: "Cartera", path: "/cartera", icon: Wallet },
   { label: "Cierre", path: "/cierre", icon: ClipboardCheck },
@@ -27,7 +30,7 @@ export function Sidebar({ open, onClose, onLogout, userName }: SidebarProps) {
     <>
       {open && <button aria-label="Cerrar menú" onClick={onClose} className="fixed inset-0 z-40 bg-slate-900/30 lg:hidden" />}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r border-blue-200/80 dark:border-slate-700 bg-[#eaf1fb] dark:bg-slate-900 shadow-[5px_0_24px_-16px_rgba(24,63,109,0.35)] transition-transform duration-300 lg:translate-x-0",
+        "fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col overflow-y-auto border-r border-blue-200/80 dark:border-slate-700 bg-[#eaf1fb] dark:bg-slate-900 shadow-[5px_0_24px_-16px_rgba(24,63,109,0.35)] transition-transform duration-300 lg:translate-x-0",
         open ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex h-[82px] shrink-0 items-center justify-between border-b border-white/15 bg-brand-500 px-6 text-white">
@@ -66,6 +69,7 @@ export function Sidebar({ open, onClose, onLogout, userName }: SidebarProps) {
         </div>
 
         <div className="mt-auto p-4">
+          <div className="mb-4"><ChristmasGreeting /></div>
           <div className="rounded-2xl bg-white/70 dark:bg-slate-800/80 ring-1 ring-blue-100 dark:ring-slate-700 p-4">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-slate-900 text-brand-600 dark:text-brand-300">

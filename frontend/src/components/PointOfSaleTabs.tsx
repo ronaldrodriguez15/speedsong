@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { AllPointsSummary } from './AllPointsSummary';
 import { ArrowDownLeft, ArrowRightLeft, Banknote, CalendarDays, CircleAlert, CreditCard, LoaderCircle, RefreshCw, Smartphone, Store, TrendingUp } from "lucide-react";
 import { api, apiError } from "../services/api";
 import { SalesRecordsModal, type SalesDetailSelection } from "./SalesRecordsModal";
 
 const points = [
+  { id: "all", name: "Todos los puntos" },
   { id: "bodega", name: "Bodega" },
   { id: "villa", name: "Villa" },
   { id: "local", name: "Local" },
@@ -57,6 +59,7 @@ export function PointOfSaleTabs() {
   }, []);
 
   useEffect(() => {
+    if (points[selected].id === 'all') return;
     const controller = new AbortController();
     setRequestKey(key);
     setError("");
@@ -131,6 +134,7 @@ export function PointOfSaleTabs() {
       ><Store size={16} />{point.name}</button>)}
     </div>
     {points.map((point, index) => <div key={point.id} role="tabpanel" id={`pos-panel-${point.id}`} aria-labelledby={`pos-tab-${point.id}`} hidden={selected !== index} tabIndex={0} className="p-5 focus-visible:outline-brand-500 sm:p-6">
+      {point.id === "all" ? (selected === index && <AllPointsSummary metric="sales" period={period} onPeriodChange={value => setPeriod(value as Period)} onSelect={id => setSelected(points.findIndex(item => item.id === id))} />) : <>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><p className="text-xs font-semibold uppercase tracking-widest text-brand-600 dark:text-brand-400">Resumen de ventas</p><h3 className="mt-1 text-xl font-semibold">{point.name}</h3></div>
         <div className="flex flex-wrap items-center gap-2">
@@ -162,6 +166,7 @@ export function PointOfSaleTabs() {
           {visibleSummary.sale_count === 0 && <p className="py-3 text-center text-sm text-slate-500 dark:text-slate-400">No hay ventas completadas en este período.</p>}
           <div className="flex flex-wrap justify-between gap-3 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400"><p className="flex items-center gap-1.5"><ArrowDownLeft size={14} />Actualizado {new Date(visibleSummary.updated_at).toLocaleTimeString("es-CO", { timeZone: "America/Bogota", hour: "2-digit", minute: "2-digit" })} · Colombia</p></div>
         </div>}
+      </>}
     </div>)}
     {detail && <SalesRecordsModal key={`${detail.point}:${detail.snapshot}:${detail.method}`} selection={detail} onClose={() => setDetail(null)} />}
   </section>;

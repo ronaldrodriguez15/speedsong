@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AllPointsSummary } from '../components/AllPointsSummary';
 import { ChevronLeft, ChevronRight, CircleAlert, Eye, LoaderCircle, ReceiptText, RefreshCw, Search, Users, Wallet } from "lucide-react";
 import { api, apiError } from "../services/api";
 import { PointOfSaleSelector, pointsOfSale } from "../components/PointOfSaleSelector";
@@ -13,7 +14,7 @@ interface ReceivablesPage {
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 export function Cartera() {
-  const [point, setPoint] = useState("bodega");
+  const [point, setPoint] = useState("all");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState("");
   const [page, setPage] = useState(1);
@@ -28,11 +29,12 @@ export function Cartera() {
   const force = useRef(false);
   const key = JSON.stringify([point, search, page, day]);
   const [requestKey, setRequestKey] = useState(key);
-  const name = pointsOfSale.find(item => item.id === point)!.name;
+  const name = pointsOfSale.find(item => item.id === point)?.name ?? 'Todos los puntos';
 
   useEffect(() => { const timer = window.setInterval(() => setDay(today()), 30000); return () => window.clearInterval(timer); }, []);
   useEffect(() => { const timer = window.setTimeout(() => { setSearch(draft.trim()); setPage(1); }, 350); return () => window.clearTimeout(timer); }, [draft]);
   useEffect(() => {
+    if (point === 'all') return;
     const controller = new AbortController();
     const cached = cache.current.get(key);
     const refresh = force.current;
@@ -63,8 +65,15 @@ export function Cartera() {
   }
   const detailButton = (customer: Customer) => <button type="button" className="inline-flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 focus-visible:ring-2 focus-visible:ring-brand-400 dark:bg-brand-900/50 dark:text-brand-300 dark:hover:bg-brand-900" aria-haspopup="dialog" aria-label={`Ver créditos de ${customer.name}`} onClick={() => openDetail(customer)}><Eye size={16} />Detalles</button>;
 
+  if (point === 'all') return <section className="card overflow-hidden">
+    <PointOfSaleSelector selected={point} onChange={changePoint} includeAll />
+    <div role="tabpanel" id="receivables-panel" aria-labelledby="receivables-tab-all" tabIndex={0}>
+      <AllPointsSummary metric="receivables" onSelect={changePoint} />
+    </div>
+  </section>;
+
   return <section className="card overflow-hidden">
-    <PointOfSaleSelector selected={point} onChange={changePoint} />
+    <PointOfSaleSelector selected={point} onChange={changePoint} includeAll />
     <div role="tabpanel" id="receivables-panel" aria-labelledby={`receivables-tab-${point}`} tabIndex={0} className="p-5 focus-visible:outline-brand-500 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">Créditos mayores a 60 días</p><h3 className="mt-1 text-xl font-semibold">{name}</h3></div><button type="button" className="btn-quiet" disabled={busy} onClick={refresh}><RefreshCw size={16} className={busy ? "animate-spin" : ""} />Actualizar</button></div>
       <div className="mt-5"><label className="relative block w-full sm:max-w-xs"><span className="sr-only">Buscar cliente</span><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input type="search" maxLength={150} value={draft} onChange={event => setDraft(event.target.value)} placeholder="Buscar cliente..." className="field py-2.5 pl-10" /></label></div>

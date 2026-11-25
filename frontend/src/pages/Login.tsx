@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { ChristmasGreeting, ChristmasLights } from '../components/ui/ChristmasDecor';
 import { Navigate } from "react-router-dom";
 import { Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Zap } from "lucide-react";
 import { Logo } from "../components/ui/Logo";
@@ -31,6 +32,7 @@ export function Login() {
     <div className="grid min-h-screen bg-white dark:bg-slate-900 lg:grid-cols-[1.05fr_.95fr]">
       <div className="absolute right-4 top-4 z-10"><ThemeToggle /></div>
       <section className="relative hidden overflow-hidden bg-gradient-to-br from-brand-600 via-brand-500 to-sky-400 p-12 text-white lg:flex lg:flex-col lg:justify-between">
+        <div className="absolute inset-x-0 top-0"><ChristmasLights /></div>
         <div className="absolute -right-32 -top-28 h-96 w-96 rounded-full border-[1px] border-white/15" />
         <div className="absolute -bottom-40 -left-24 h-[500px] w-[500px] rounded-full border-[1px] border-white/15" />
         <div className="relative"><Logo light large /></div>
@@ -50,6 +52,7 @@ export function Login() {
       <section className="flex min-h-screen items-center justify-center px-5 py-12 sm:px-10">
         <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[420px]">
           <div className="mb-10 flex justify-center lg:justify-start"><Logo large /></div>
+          <div className="mb-6"><ChristmasGreeting /></div>
           <div className="mb-9">
             <p className="text-sm font-semibold text-brand-600 dark:text-brand-300">Bienvenido de nuevo</p>
             <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-800 dark:text-slate-100">Iniciar sesión</h2>
