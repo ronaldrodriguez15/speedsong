@@ -132,7 +132,7 @@ export function Panel() {
         ]
       : []),
     {
-      label: "Cartera pendiente > 60 días",
+      label: "Cartera pendiente",
       value: credit.data ? formatCurrency(credit.data.summary.amount) : "—",
       state: credit,
       href: "/cartera",
@@ -141,8 +141,8 @@ export function Panel() {
     {
       label:
         point === "all"
-          ? "Clientes por sede con créditos > 60 días"
-          : "Clientes con créditos > 60 días",
+          ? "Clientes por sede con créditos"
+          : "Clientes con créditos",
       value: credit.data?.summary.customer_count ?? "—",
       state: credit,
       href: "/cartera",

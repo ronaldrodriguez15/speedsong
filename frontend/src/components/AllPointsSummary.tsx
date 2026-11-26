@@ -49,7 +49,7 @@ export function AllPointsSummary({ metric, onSelect, period = 'today', onPeriodC
   const sales = metric === 'sales';
   const sum = (get: (data: Summary) => number) => rows.reduce((total, row) => total + get(row.data), 0);
   const cards = [
-    { label: sales ? 'Ventas netas' : 'Saldo pendiente · Más de 60 días', value: formatCurrency(sum(data => sales ? data.total : data.summary.amount)) },
+    { label: sales ? 'Ventas netas' : 'Saldo pendiente por cobrar', value: formatCurrency(sum(data => sales ? data.total : data.summary.amount)) },
     { label: sales ? 'Operaciones' : 'Ventas pendientes', value: sum(data => sales ? data.sale_count : data.summary.sale_count).toLocaleString('es-CO') },
     ...(!sales ? [{ label: 'Clientes por sede', value: sum(data => data.summary.customer_count).toLocaleString('es-CO') }] : []),
   ];
@@ -57,7 +57,7 @@ export function AllPointsSummary({ metric, onSelect, period = 'today', onPeriodC
     <div className="flex flex-wrap items-center justify-between gap-3"><h3 className="text-xl font-semibold">Todos los puntos</h3><button type="button" disabled={busy} className="btn-quiet" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={16} className={busy ? 'animate-spin' : ''}/>Actualizar</button></div>
     {sales && <div role="group" aria-label="Período de ventas" className="flex flex-wrap gap-2">{periods.map(item => <button key={item.id} type="button" aria-pressed={period === item.id} onClick={() => onPeriodChange?.(item.id)} className={period === item.id ? 'btn-primary' : 'btn-quiet'}>{item.label}</button>)}</div>}
     {busy ? <p role="status" className="py-10 text-sm text-slate-500">Consultando todos los puntos de venta…</p> : <>
-      <p className="text-sm text-slate-500 dark:text-slate-400">{rows.length} de {pointsOfSale.length} sedes incluidas.{!sales && ' Cartera actual mayor a 60 días. Un cliente puede aparecer en varias sedes.'}</p>
+      <p className="text-sm text-slate-500 dark:text-slate-400">{rows.length} de {pointsOfSale.length} sedes incluidas.{!sales && ' Cartera actual de todas las antigüedades. Un cliente puede aparecer en varias sedes.'}</p>
       {!!visible?.missing.length && <p className="text-sm text-amber-700 dark:text-amber-300">{rows.length ? 'El total incluye únicamente las sedes consultadas.' : 'No se obtuvieron datos. Intenta actualizar.'} Sin datos: {visible.missing.join(', ')}.</p>}
       {!!rows.length && <>
         <div className="grid gap-3 sm:grid-cols-3">{cards.map(card => <div key={card.label} className="rounded-2xl bg-brand-50 p-5 dark:bg-brand-900/40"><p className="text-sm text-slate-500 dark:text-slate-400">{card.label}</p><p className="mt-2 break-words text-2xl font-bold">{card.value}</p></div>)}</div>

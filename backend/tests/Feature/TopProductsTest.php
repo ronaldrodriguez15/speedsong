@@ -86,4 +86,70 @@ class TopProductsTest extends TestCase
         foreach (['villa', 'local', 'bmanga', 'cucuta'] as $point) $this->getJson("/api/points-of-sale/$point/top-products?period=today")->assertOk()->assertJsonPath('data.point', $point);
         Http::assertSentCount(8); $this->travelBack();
     }
+
+    public function test_reference_search_includes_products_outside_top_ten_and_reuses_cache(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Http::fake(fn () => Http::response([$this->sale(1, array_map(fn ($id) => $this->item($id, $id), range(1, 12)))]));
+        $this->getJson('/api/points-of-sale/bodega/top-products')->assertOk()->assertJsonCount(10, 'data.products')->assertJsonMissingPath('data.all_items');
+        $this->getJson('/api/points-of-sale/bodega/top-products?search=SKU-1,SKU-2')->assertOk()->assertJsonCount(5, 'data.products');
+        $this->getJson('/api/points-of-sale/bodega/top-products?search=SKU-2')->assertOk()->assertJsonPath('data.products.0.units', 2);
+        Http::assertSentCount(1);
+        $this->getJson('/api/points-of-sale/bodega/top-products?'.http_build_query(['search' => implode(',', range(1, 21))]))->assertUnprocessable();
+    }
+
+    public function test_store_group_merges_references_before_netting_returns_and_ranking(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Http::fake(function ($request) {
+            $villa = str_contains($request->url(), '/villa/');
+            $item = [...$this->item($villa ? 99 : 1, $villa ? -2 : 3), 'product_id' => 'SHARED'];
+            $separate = [...$this->item(2, 1), 'product_id' => ''];
+            return Http::response([$this->sale(1, [$item, $separate])]);
+        });
+        $this->getJson('/api/points-of-sale/stores/top-products')->assertOk()->assertJsonPath('data.products.0.sku', 'SHARED')->assertJsonPath('data.products.0.units', 7)->assertJsonPath('data.product_count', 5)->assertJsonPath('data.sale_count', 4);
+        $this->getJson('/api/points-of-sale/stores/top-products?search=SHARED')->assertOk()->assertJsonCount(1, 'data.products')->assertJsonPath('data.products.0.units', 7);
+        Http::assertSentCount(4);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), '/bodega/'));
+    }
+
+    public function test_store_group_does_not_return_partial_totals_if_a_store_fails(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Http::fake(fn ($request) => Http::response([], str_contains($request->url(), '/local/') ? 503 : 200));
+        $this->getJson('/api/points-of-sale/stores/top-products')->assertStatus(502)->assertJsonMissingPath('data');
+    }
+
+    public function test_group_paginates_only_pending_stores_and_reuses_individual_cache(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Http::fake(function ($request) {
+            $local = str_contains($request->url(), '/local/');
+            $offset = (int) $request['offset'];
+            return Http::response([$this->sale($offset + 1, [$this->item(1, $offset ? -1 : 3)])], 200, ['x-total-records' => $local ? '2' : '1']);
+        });
+        $this->getJson('/api/points-of-sale/villa/top-products')->assertOk();
+        Http::assertSentCount(1);
+        $this->getJson('/api/points-of-sale/stores/top-products')->assertOk()
+            ->assertJsonPath('data.products.0.units', 11)->assertJsonPath('data.sale_count', 5);
+        Http::assertSentCount(5);
+        $requests = Http::recorded()->map(fn ($pair) => $pair[0]);
+        $this->assertCount(1, $requests->filter(fn ($request) => str_contains($request->url(), '/villa/')));
+        $this->assertCount(1, $requests->filter(fn ($request) => $request['offset'] === 1 && str_contains($request->url(), '/local/')));
+        $this->getJson('/api/points-of-sale/stores/top-products?search=SKU-1')->assertOk()->assertJsonPath('data.products.0.units', 11);
+        $this->getJson('/api/points-of-sale/local/top-products')->assertOk()->assertJsonPath('data.products.0.units', 2);
+        Http::assertSentCount(5);
+        $this->travel(301)->seconds();
+        $this->getJson('/api/points-of-sale/stores/top-products')->assertOk();
+        Http::assertSentCount(10);
+        $this->getJson('/api/points-of-sale/stores/top-products?refresh=1')->assertOk();
+        Http::assertSentCount(15);
+    }
+
+    public function test_duplicate_remote_pages_do_not_produce_inflated_rankings(): void
+    {
+        $this->actingAs(User::factory()->create());
+        Http::fake(fn () => Http::response([$this->sale(1, [$this->item(1, 3)])], 200, ['x-total-records' => '2']));
+        $this->getJson('/api/points-of-sale/stores/top-products')->assertStatus(502)->assertJsonMissingPath('data');
+    }
 }

@@ -14,7 +14,7 @@ class PointOfSaleReceivables
     private int $requests = 0;
     private float $started;
 
-    public function overdue(array $point): array
+    public function outstanding(array $point): array
     {
         $this->started = microtime(true);
         $this->requests = 0;
@@ -41,7 +41,6 @@ class PointOfSaleReceivables
                 if ($cents <= 0) continue;
                 $date = $this->date($fields['fecha de venta'] ?? $fields['sale date'] ?? $fields['fecha'] ?? $fields['date'] ?? '');
                 $days = (int) $date->diffInDays($today, false);
-                if ($days <= 60) continue;
                 $name = $fields['nombre del cliente'] ?? $fields['customer name'] ?? '';
                 if ($name === '') throw new RuntimeException('Un crédito pendiente no identifica al cliente.');
                 $credits[] = ['sale_id' => $saleId, 'reference' => $reference, 'name' => $name,
@@ -82,6 +81,9 @@ class PointOfSaleReceivables
         $total = array_sum(array_column($customers, 'cents'));
         foreach ($customers as &$customer) {
             $customer['amount'] = $customer['cents'] / 100;
+            foreach ([60, 90, 120] as $days) {
+                $customer['over_'.$days] = array_sum(array_map(fn ($credit) => $credit['age_days'] > $days ? (int) round($credit['amount'] * 100) : 0, $customer['credits'])) / 100;
+            }
             unset($customer['cents']);
             usort($customer['credits'], fn ($a, $b) => [$a['sale_date'], $a['id']] <=> [$b['sale_date'], $b['id']]);
         }
@@ -90,6 +92,25 @@ class PointOfSaleReceivables
         return ['customers' => array_values($customers), 'customer_count' => count($customers),
             'sale_count' => count($credits), 'amount' => $total / 100, 'as_of' => $today->toDateString(),
             'updated_at' => CarbonImmutable::now('America/Bogota')->toIso8601String()];
+    }
+
+    public function paid(array $point, array $customer): float
+    {
+        $this->started = microtime(true);
+        $this->requests = 0;
+        $paid = 0;
+        foreach ($customer['credits'] as $credit) {
+            $sale = $this->get($point, 'sales/'.$credit['id'])->json();
+            if ((string) ($sale['sale_id'] ?? '') !== (string) $credit['id']
+                || (string) ($sale['customer_id'] ?? '') !== (string) $customer['id']
+                || !is_numeric($sale['total'] ?? null) || !is_finite((float) $sale['total'])) {
+                throw new RuntimeException('No se pudo verificar el total pagado de los créditos.');
+            }
+            $difference = (int) round((float) $sale['total'] * 100) - (int) round($credit['amount'] * 100);
+            if ($difference < 0) throw new RuntimeException('El saldo del crédito cambió. Actualiza la cartera para consultar los pagos.');
+            $paid += $difference;
+        }
+        return $paid / 100;
     }
 
     private function directory(array $point): array

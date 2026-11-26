@@ -21,7 +21,7 @@ class ProductRanking
                 throw new RuntimeException('La API devolvió un producto incompleto o una cantidad inválida.');
             }
             if (!isset($this->items[$id])) $this->items[$id] = [
-                'id' => $id, 'name' => (string) $item['name'], 'sku' => (string) ($item['product_id'] ?? $item['item_number'] ?? ''),
+                'id' => $id, 'name' => (string) $item['name'], 'sku' => trim((string) ($item['product_id'] ?? '')),
                 'category' => (string) ($item['category_name'] ?? ''), 'quantity_micros' => 0,
             ];
             $this->items[$id]['quantity_micros'] += (int) round((float) $quantity * 1000000);
@@ -41,6 +41,6 @@ class ProductRanking
             unset($item['quantity_micros']);
         }
         unset($item);
-        return ['products' => $top, 'product_count' => count($items), 'top_units' => $topQuantity / 1000000];
+        return ['products' => $top, 'product_count' => count($items), 'top_units' => $topQuantity / 1000000, 'all_items' => array_values($this->items)];
     }
 }

@@ -7,10 +7,7 @@ import {
   RefreshCw,
   Trophy
 } from "lucide-react";
-import {
-  PointOfSaleSelector,
-  pointsOfSale,
-} from "../components/PointOfSaleSelector";
+import { ReferenceSearch } from "../components/ReferenceSearch";
 import { api, apiError } from "../services/api";
 
 interface Product {
@@ -52,6 +49,7 @@ const today = () =>
 
 export function MasVendidos() {
   const [point, setPoint] = useState("bodega");
+  const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<Period>("last30");
   const [day, setDay] = useState(today);
   const [attempt, setAttempt] = useState(0);
@@ -62,9 +60,9 @@ export function MasVendidos() {
   const [error, setError] = useState("");
   const cache = useRef(new Map<string, Ranking>());
   const force = useRef(false);
-  const key = `${point}:${period}:${day}`;
+  const key = `${point}:${period}:${day}:${search}`;
   const [requestKey, setRequestKey] = useState(key);
-  const name = pointsOfSale.find((item) => item.id === point)!.name;
+  const name = point === "bodega" ? "Bodega" : "Villa, Local, Bucaramanga y Cúcuta";
   useEffect(() => {
     const timer = window.setInterval(() => setDay(today()), 30000);
     return () => clearInterval(timer);
@@ -80,7 +78,7 @@ export function MasVendidos() {
     if (
       cached &&
       !refresh &&
-      Date.now() - Date.parse(cached.updated_at) < 60000
+      Date.now() - Date.parse(cached.updated_at) < 300000
     ) {
       setLoading(false);
       return () => controller.abort();
@@ -88,7 +86,7 @@ export function MasVendidos() {
     setLoading(true);
     api
       .get<{ data: Ranking }>(`/points-of-sale/${point}/top-products`, {
-        params: { period },
+        params: { period, search: search || undefined, refresh: refresh ? 1 : undefined },
         signal: controller.signal,
         feedback: false,
         timeout: 90000,
@@ -108,7 +106,7 @@ export function MasVendidos() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [point, period, key, attempt]);
+  }, [point, period, search, key, attempt]);
   const visible = result?.key === key ? result.data : cache.current.get(key);
   const busy = requestKey === key ? loading : !visible;
   const visibleError = requestKey === key ? error : "";
@@ -120,11 +118,12 @@ export function MasVendidos() {
 
   return (
     <section className="card overflow-hidden">
-      <PointOfSaleSelector
-        selected={point}
-        onChange={setPoint}
-        idPrefix="top-products"
-      />
+      <div role="tablist" aria-label="Grupo de puntos de venta" className="flex gap-2 border-b border-slate-100 p-3 dark:border-slate-800">
+        {[{ id: 'bodega', label: 'Bodega' }, { id: 'stores', label: 'Otros puntos de venta' }].map((tab, index) => <button type="button" role="tab" id={`top-products-tab-${tab.id}`} aria-controls="top-products-panel" aria-selected={point === tab.id} tabIndex={point === tab.id ? 0 : -1} key={tab.id} onClick={() => setPoint(tab.id)} onKeyDown={event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault(); const next = event.key === 'Home' ? 'bodega' : event.key === 'End' ? 'stores' : index === 0 ? 'stores' : 'bodega'; setPoint(next); document.getElementById('top-products-tab-' + next)?.focus();
+        }} className={`flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-brand-400 ${point === tab.id ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:bg-brand-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}>{tab.label}</button>)}
+      </div>
       <div
         role="tabpanel"
         id="top-products-panel"
@@ -165,6 +164,11 @@ export function MasVendidos() {
               {item.label}
             </button>
           ))}
+        </div>
+        <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h4 className="text-sm font-semibold">Consultar ventas por referencia</h4>{search && <button type="button" className="btn-quiet" onClick={() => setSearch('')}>Volver al Top 10</button>}</div>
+          <ReferenceSearch loading={busy} onSearch={setSearch} />
+          {search && <p className="mt-3 break-words text-xs text-slate-500 dark:text-slate-400">Filtro aplicado: {search}</p>}
         </div>
         {visibleError && visible && (
           <p
@@ -226,7 +230,7 @@ export function MasVendidos() {
                     <div className="relative">
                       <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-semibold">
                         <Trophy size={15} className="text-amber-200" />
-                        PRODUCTO MÁS VENDIDO
+                        {search ? 'MAYOR VENTA ENTRE LAS REFERENCIAS' : 'PRODUCTO MÁS VENDIDO'}
                       </span>
                       <div className="mt-5 flex flex-wrap items-end justify-between gap-5">
                         <div className="min-w-0 max-w-xl">
@@ -254,7 +258,7 @@ export function MasVendidos() {
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Productos con ventas netas
+                        {search ? 'Productos encontrados' : 'Productos con ventas netas'}
                       </p>
                       <p className="mt-2 text-2xl font-semibold">
                         {units(visible.product_count)}
@@ -273,7 +277,7 @@ export function MasVendidos() {
                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 p-5 dark:border-slate-800">
                       <h4 className="flex items-center gap-2 font-semibold">
                         <Package size={19} className="text-brand-500" />
-                        Top 10 de productos
+                        {search ? 'Unidades vendidas por referencia' : 'Top 10 de productos'}
                       </h4>
                       <span className="text-xs text-slate-500 dark:text-slate-400">
                         {visible.products.length} de {visible.product_count}{" "}
@@ -343,7 +347,7 @@ export function MasVendidos() {
                     className="mx-auto mb-3 text-slate-300 dark:text-slate-600"
                   />
                   <p className="font-medium">
-                    Sin productos vendidos en este período
+                    {search ? 'Sin ventas registradas para estas referencias' : 'Sin productos vendidos en este período'}
                   </p>
                   <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
                     Selecciona otro período o punto de venta.
@@ -354,7 +358,7 @@ export function MasVendidos() {
                 <ArrowUpRight size={16} className="mt-0.5 shrink-0" />
                 Unidades vendidas menos devoluciones. Se excluyen ventas
                 anuladas, suspendidas y abonos a créditos. Las variantes del
-                mismo producto se agrupan.
+                mismo producto se agrupan. Los datos se conservan hasta 5 minutos; pulsa Actualizar para consultar nuevamente las sedes.
               </p>
             </>
           )

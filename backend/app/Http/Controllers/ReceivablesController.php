@@ -25,11 +25,11 @@ class ReceivablesController extends Controller
         $fingerprint = hash('sha256', $configuration['url'].$configuration['api_key']);
         $day = now('America/Bogota')->toDateString();
         try {
-            $snapshot = Cache::remember("pos-receivables-v1:$point:$day:$fingerprint", 60, function () use ($service, $configuration, $point) {
+            $snapshot = Cache::remember("pos-receivables-v2:$point:$day:$fingerprint", 60, function () use ($service, $configuration, $point) {
                 try {
-                    $result = $service->overdue($configuration);
+                    $result = $service->outstanding($configuration);
                     $result['snapshot_id'] = (string) Str::uuid();
-                    Cache::put("pos-receivables-records:$point:{$result['snapshot_id']}", $result, 900);
+                    Cache::put("pos-receivables-records-v2:$point:{$result['snapshot_id']}", $result, 900);
                     return $result;
                 } catch (RuntimeException $e) {
                     if ($e->getCode() === 501) return ['unavailable' => $e->getMessage()];
@@ -56,15 +56,33 @@ class ReceivablesController extends Controller
     public function credits(Request $request, string $point, string $customer): JsonResponse
     {
         abort_unless(array_key_exists($point, config('points_of_sale')), 404);
-        $data = $request->validate(['snapshot' => ['required', 'uuid'], 'page' => ['nullable', 'integer', 'min:1']]);
-        $snapshot = Cache::get("pos-receivables-records:$point:{$data['snapshot']}");
+        $data = $request->validate(['snapshot' => ['required', 'uuid'], 'page' => ['nullable', 'integer', 'min:1'],
+            'tab' => ['nullable', 'in:amount,over_60,over_90,over_120,paid']]);
+        $snapshot = Cache::get("pos-receivables-records-v2:$point:{$data['snapshot']}");
         if (!$snapshot) return response()->json(['message' => 'Esta consulta venció. Cierra el detalle y actualiza la cartera.'], 410);
         $record = collect($snapshot['customers'])->first(fn ($row) => (string) $row['id'] === $customer);
         abort_unless($record, 404);
         $page = (int) ($data['page'] ?? 1);
-        return response()->json(['data' => array_slice($record['credits'], ($page - 1) * 20, 20),
-            'customer' => ['id' => $record['id'], 'name' => $record['name']], 'amount' => $record['amount'],
-            'total' => $record['sale_count'], 'current_page' => $page, 'last_page' => max(1, (int) ceil($record['sale_count'] / 20)),
+        $tab = $data['tab'] ?? 'amount';
+        $credits = $record['credits'];
+        $paidError = null;
+        if ($tab === 'paid') {
+            $balances = $this->balances($point, $record, $data['snapshot']);
+            $value = $balances['paid'];
+            $paidError = $balances['paid_error'];
+            $credits = [];
+        } else {
+            $value = $record[$tab];
+            if ($tab !== 'amount') {
+                $days = (int) substr($tab, 5);
+                $credits = array_values(array_filter($credits, fn ($credit) => $credit['age_days'] > $days));
+            }
+        }
+        $total = count($credits);
+        return response()->json(['data' => array_slice($credits, ($page - 1) * 20, 20),
+            'customer' => ['id' => $record['id'], 'name' => $record['name']], 'tab' => $tab, 'value' => $value,
+            'paid_error' => $paidError, 'customer_credit_count' => $record['sale_count'],
+            'total' => $total, 'current_page' => $page, 'last_page' => max(1, (int) ceil($total / 20)),
             'as_of' => $snapshot['as_of'], 'updated_at' => $snapshot['updated_at']]);
     }
 
@@ -72,7 +90,7 @@ class ReceivablesController extends Controller
     {
         abort_unless(array_key_exists($point, config('points_of_sale')), 404);
         $data = $request->validate(['snapshot' => ['required', 'uuid']]);
-        $snapshot = Cache::get("pos-receivables-records:$point:{$data['snapshot']}");
+        $snapshot = Cache::get("pos-receivables-records-v2:$point:{$data['snapshot']}");
         if (!$snapshot) return response()->json(['message' => 'Esta consulta venció. Cierra el detalle y actualiza la cartera antes de descargar el PDF.'], 410);
         $record = collect($snapshot['customers'])->first(fn ($row) => (string) $row['id'] === $customer);
         abort_unless($record, 404);
@@ -80,8 +98,23 @@ class ReceivablesController extends Controller
             'point' => ['id' => $point, 'name' => config("points_of_sale.$point.name")],
             'customer' => ['id' => $record['id'], 'name' => $record['name']],
             'credits' => $record['credits'], 'amount' => $record['amount'], 'total' => $record['sale_count'],
+            ...$this->balances($point, $record, $data['snapshot']),
             'as_of' => $snapshot['as_of'], 'updated_at' => $snapshot['updated_at'],
             'generated_at' => now('America/Bogota')->toIso8601String(),
         ]])->header('Cache-Control', 'private, no-store');
+    }
+
+    private function balances(string $point, array $record, string $snapshot): array
+    {
+        $balances = array_intersect_key($record, array_flip(['over_60', 'over_90', 'over_120']));
+        try {
+            $balances['paid'] = Cache::remember("pos-receivables-paid:$point:$snapshot:{$record['id']}", 900,
+                fn () => app(PointOfSaleReceivables::class)->paid(config("points_of_sale.$point"), $record));
+            $balances['paid_error'] = null;
+        } catch (ConnectionException | RuntimeException $e) {
+            $balances['paid'] = null;
+            $balances['paid_error'] = 'No fue posible verificar los pagos. Actualiza la cartera y vuelve a intentarlo.';
+        }
+        return $balances;
     }
 }

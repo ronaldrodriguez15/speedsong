@@ -6,6 +6,7 @@ export interface ReceivablesReport {
   point: { id: string; name: string };
   customer: { id: string; name: string };
   credits: { id: string; reference: string; sale_date: string; age_days: number; amount: number; comment: string }[];
+  over_60: number; over_90: number; over_120: number; paid: number | null;
   amount: number; total: number; as_of: string; updated_at: string; generated_at: string;
 }
 type LogoImage = { data: string; width: number; height: number };
@@ -15,7 +16,7 @@ const dateTime = (value: string) => new Date(value).toLocaleString("es-CO", { ti
 
 export function buildReceivablesPdf(report: ReceivablesReport, logo?: LogoImage) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
-  doc.setProperties({ title: `Cartera - ${report.customer.name}`, subject: `Créditos pendientes mayores a 60 días · ${report.point.name}`, author: "SpeedSong", creator: "SpeedSong" });
+  doc.setProperties({ title: `Cartera - ${report.customer.name}`, subject: `Créditos pendientes · ${report.point.name}`, author: "SpeedSong", creator: "SpeedSong" });
   const finalY = () => (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
   const header = () => {
     doc.setFillColor(35, 136, 232); doc.rect(0, 0, 210, 32, "F");
@@ -45,7 +46,7 @@ export function buildReceivablesPdf(report: ReceivablesReport, logo?: LogoImage)
   });
   autoTable(doc, {
     startY: finalY() + 7, margin: { left: 16, right: 16, top: 43, bottom: 25 }, theme: "plain",
-    body: [["Incluye únicamente créditos pendientes con más de 60 días desde la fecha de venta. Los importes reflejan el saldo por cobrar, con los abonos aplicados por el punto de venta."]],
+    body: [["Incluye todos los créditos pendientes, sin límite de antigüedad. Los importes reflejan el saldo por cobrar, con los abonos aplicados por el punto de venta."]],
     styles: { font: "helvetica", fontSize: 9, textColor: [100, 116, 139], cellPadding: 0, overflow: "linebreak" }, willDrawPage: header,
   });
   autoTable(doc, {
@@ -59,6 +60,11 @@ export function buildReceivablesPdf(report: ReceivablesReport, logo?: LogoImage)
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles: { 0: { cellWidth: 71 }, 1: { cellWidth: 32 }, 2: { cellWidth: 28, halign: "center" }, 3: { cellWidth: 47, halign: "right", fontStyle: "bold" } },
     willDrawPage: header,
+  });
+  autoTable(doc, {
+    startY: finalY() + 7, margin: { left: 16, right: 16, top: 43, bottom: 25 }, theme: "striped",
+    body: [['Saldo mayor a 60 días', money(report.over_60)], ['Saldo mayor a 90 días', money(report.over_90)], ['Saldo mayor a 120 días', money(report.over_120)], ['Pagado en las ventas con crédito pendiente', report.paid === null ? 'No disponible' : money(report.paid)], ['Antigüedad', 'Saldos acumulativos desde la fecha de venta.']],
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 4 }, willDrawPage: header,
   });
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page++) {
@@ -91,7 +97,7 @@ async function loadLogo(): Promise<LogoImage | undefined> {
 }
 
 export async function downloadReceivablesPdf(point: string, customer: string, snapshot: string, signal: AbortSignal) {
-  const { data } = await api.get<{ data: ReceivablesReport }>(`/points-of-sale/${point}/receivables/${customer}/report`, { params: { snapshot }, signal, feedback: false });
+  const { data } = await api.get<{ data: ReceivablesReport }>(`/points-of-sale/${point}/receivables/${customer}/report`, { params: { snapshot }, signal, feedback: false, timeout: 90000 });
   const logo = await loadLogo();
   if (signal.aborted) return;
   const report = data.data;

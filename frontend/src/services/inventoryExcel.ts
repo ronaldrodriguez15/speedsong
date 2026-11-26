@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 export interface InventoryResult {
   rows: { category?: string; description?: string; barcode?: string; id: string; reference: string; name: string; quantities: Record<string, number | null>; total: number | null }[];
   points: { id: string; name: string }[];
-  total: number; page: number; last_page: number;
+  total: number | null; page: number; last_page: number | null; has_more?: boolean; per_page?: number;
   updated_at: string;
   search: string;
   field: string;
