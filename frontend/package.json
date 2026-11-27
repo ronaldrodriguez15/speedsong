@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "test:panel": "node scripts/check-panel-loading.cjs",
     "test:theme": "node scripts/check-theme.cjs",
     "test:feedback": "node scripts/check-api-feedback.cjs",
     "dev": "vite",

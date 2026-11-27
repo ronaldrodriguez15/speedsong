@@ -1,3 +1,4 @@
+import { useAllowedPoints } from "../components/PointOfSaleSelector";
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
@@ -48,7 +49,9 @@ const today = () =>
   }).format(new Date());
 
 export function MasVendidos() {
-  const [point, setPoint] = useState("bodega");
+  const allowed = useAllowedPoints();
+  const groups = [{ id: 'bodega', label: 'Bodega' }, { id: 'stores', label: 'Otros puntos de venta' }].filter(group => group.id === 'bodega' ? allowed.some(p => p.id === 'bodega') : allowed.some(p => p.id !== 'bodega'));
+  const [point, setPoint] = useState(groups[0]?.id ?? 'stores');
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<Period>("last30");
   const [day, setDay] = useState(today);
@@ -62,7 +65,7 @@ export function MasVendidos() {
   const force = useRef(false);
   const key = `${point}:${period}:${day}:${search}`;
   const [requestKey, setRequestKey] = useState(key);
-  const name = point === "bodega" ? "Bodega" : "Villa, Local, Bucaramanga y Cúcuta";
+  const name = point === "bodega" ? "Bodega" : allowed.filter(p => p.id !== "bodega").map(p => p.name).join(", ");
   useEffect(() => {
     const timer = window.setInterval(() => setDay(today()), 30000);
     return () => clearInterval(timer);
@@ -119,9 +122,9 @@ export function MasVendidos() {
   return (
     <section className="card overflow-hidden">
       <div role="tablist" aria-label="Grupo de puntos de venta" className="flex gap-2 border-b border-slate-100 p-3 dark:border-slate-800">
-        {[{ id: 'bodega', label: 'Bodega' }, { id: 'stores', label: 'Otros puntos de venta' }].map((tab, index) => <button type="button" role="tab" id={`top-products-tab-${tab.id}`} aria-controls="top-products-panel" aria-selected={point === tab.id} tabIndex={point === tab.id ? 0 : -1} key={tab.id} onClick={() => setPoint(tab.id)} onKeyDown={event => {
+        {groups.map((tab, index) => <button type="button" role="tab" id={`top-products-tab-${tab.id}`} aria-controls="top-products-panel" aria-selected={point === tab.id} tabIndex={point === tab.id ? 0 : -1} key={tab.id} onClick={() => setPoint(tab.id)} onKeyDown={event => {
           if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
-          event.preventDefault(); const next = event.key === 'Home' ? 'bodega' : event.key === 'End' ? 'stores' : index === 0 ? 'stores' : 'bodega'; setPoint(next); document.getElementById('top-products-tab-' + next)?.focus();
+          event.preventDefault(); const next = groups[event.key === 'Home' ? 0 : event.key === 'End' ? groups.length - 1 : (index + 1) % groups.length].id; setPoint(next); document.getElementById('top-products-tab-' + next)?.focus();
         }} className={`flex-1 rounded-xl px-4 py-3 text-sm font-semibold transition focus-visible:ring-2 focus-visible:ring-brand-400 ${point === tab.id ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-500 hover:bg-brand-50 dark:text-slate-300 dark:hover:bg-slate-800'}`}>{tab.label}</button>)}
       </div>
       <div

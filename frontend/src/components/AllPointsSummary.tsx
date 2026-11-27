@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { api } from '../services/api';
 import { formatCurrency } from '../lib/utils';
-import { pointsOfSale } from './PointOfSaleSelector';
+import { useAllowedPoints } from './PointOfSaleSelector';
 
 type Summary = {
   total: number; sale_count: number; updated_at: string;
@@ -17,6 +17,7 @@ export function AllPointsSummary({ metric, onSelect, period = 'today', onPeriodC
   metric: 'sales' | 'receivables'; onSelect: (point: string) => void;
   period?: string; onPeriodChange?: (period: string) => void;
 }) {
+  const pointsOfSale = useAllowedPoints();
   const [result, setResult] = useState<{ key: string; rows: Row[]; missing: string[] }>();
   const [loading, setLoading] = useState(true);
   const [attempt, setAttempt] = useState(0);
@@ -42,7 +43,7 @@ export function AllPointsSummary({ metric, onSelect, period = 'today', onPeriodC
       setLoading(false);
     });
     return () => controller.abort();
-  }, [key, metric, period]);
+  }, [key, metric, period, pointsOfSale]);
   const visible = result?.key === key ? result : undefined;
   const busy = loading || !visible;
   const rows = visible?.rows ?? [];

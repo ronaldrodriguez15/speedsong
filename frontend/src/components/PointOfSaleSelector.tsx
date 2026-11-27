@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import { useRef, type KeyboardEvent } from "react";
 import { Store } from "lucide-react";
 
@@ -6,7 +8,13 @@ export const pointsOfSale = [
   { id: "bmanga", name: "Bucaramanga" }, { id: "cucuta", name: "Cúcuta" },
 ] as const;
 
+export function useAllowedPoints() {
+  const { user } = useAuth();
+  return useMemo(() => pointsOfSale.filter(point => user?.is_admin || user?.point_ids?.includes(point.id)), [user?.is_admin, user?.point_ids]);
+}
+
 export function PointOfSaleSelector({ selected, onChange, idPrefix = "receivables", includeAll = false }: { selected: string; onChange: (point: string) => void; idPrefix?: string; includeAll?: boolean }) {
+  const pointsOfSale = useAllowedPoints();
   const points = includeAll ? [{ id: "all", name: "Todos los puntos" }, ...pointsOfSale] : pointsOfSale;
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   function navigate(event: KeyboardEvent, index: number) {

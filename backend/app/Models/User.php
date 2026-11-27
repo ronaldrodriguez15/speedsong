@@ -41,5 +41,17 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed', 'is_admin' => 'boolean',
+        'point_ids' => 'array',
     ];
+
+    public function accessiblePoints(): array
+    {
+        $points = config('points_of_sale');
+        return $this->is_admin ? $points : array_intersect_key($points, array_flip($this->point_ids ?? []));
+    }
+
+    public function canAccessPoint(string $point): bool
+    {
+        return array_key_exists($point, $this->accessiblePoints());
+    }
 }

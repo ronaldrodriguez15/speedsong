@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
@@ -8,14 +8,13 @@ import {
   TrendingUp,
   ClipboardCheck,
 } from "lucide-react";
-import { api } from "../services/api";
 import { formatCurrency } from "../lib/utils";
-import { useAuth } from "../contexts/AuthContext";
 import {
   PointOfSaleSelector,
-  pointsOfSale,
+  useAllowedPoints,
 } from "../components/PointOfSaleSelector";
-import { consolidatePanel } from "../services/panelSummary";
+import { loadPanelMetric, type PanelMetric, type PanelState } from "../services/panelLoader";
+import { useAuth } from "../contexts/AuthContext";
 
 const periods = [
   { id: "today", label: "Hoy", description: "de hoy" },
@@ -31,9 +30,11 @@ const periods = [
     description: "de los últimos 30 días",
   },
 ] as const;
-type State = { loading: boolean; data?: any; error?: string; note?: string };
+type State = PanelState;
 export function Panel() {
   const { user } = useAuth();
+  const pointsOfSale = useAllowedPoints();
+  const canViewSales = pointsOfSale.length > 0;
   const [point, setPoint] = useState("all");
   const [period, setPeriod] = useState<(typeof periods)[number]["id"]>("today");
   const periodDescription = periods.find(
@@ -43,90 +44,40 @@ export function Panel() {
   const [sales, setSales] = useState<State>({ loading: true });
   const [credit, setCredit] = useState<State>({ loading: true });
   const [top, setTop] = useState<State>({ loading: true });
+  const cache = useRef(new Map<string, State>());
   useEffect(() => {
     const controller = new AbortController();
-    const load = async (
-      metric: "sales" | "receivables" | "top-products",
-      setter: (state: State) => void,
-    ) => {
-      setter({ loading: true });
-      const sources =
-        point === "all"
-          ? pointsOfSale
-          : pointsOfSale.filter((source) => source.id === point);
-      const results = await Promise.allSettled(
-        sources.map(async (source) => {
-          const response = await api.get(
-            `/points-of-sale/${source.id}/${metric}`,
-            {
-              params: metric === "receivables" ? undefined : { period },
-              signal: controller.signal,
-              feedback: false,
-              timeout: 90000,
-            },
-          );
-          return {
-            point: source.id,
-            name: source.name,
-            data: metric === "receivables" ? response.data : response.data.data,
-          };
-        }),
-      );
+    const sources = point === "all" ? pointsOfSale : pointsOfSale.filter(source => source.id === point);
+    const load = async (metric: PanelMetric, setter: (state: State) => void) => {
+      const key = JSON.stringify([user?.id, sources.map(source => source.id), period, metric]);
+      const previous = cache.current.get(key);
+      setter({ ...previous, loading: true, error: undefined, note: "Consultando puntos de venta…" });
+      const result = await loadPanelMetric(metric, sources, period, point === "all", controller.signal,
+        note => { if (!controller.signal.aborted) setter({ ...previous, loading: true, note }); });
       if (controller.signal.aborted) return;
-      const missing = sources.filter(
-        (_, index) => results[index].status === "rejected",
-      );
-      const rows = results.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      );
-      if (metric === "receivables") {
-        setter({
-          loading: false,
-          data: rows.length
-            ? point === "all"
-              ? consolidatePanel(metric, rows)
-              : rows[0].data
-            : undefined,
-          note: rows.length
-            ? point === "all"
-              ? `Cartera actual · ${rows.length} de ${sources.length} sedes consultadas`
-              : "Cartera actual"
-            : "Sin datos de cartera para esta consulta.",
-        });
-        return;
-      }
-      if (missing.length) {
-        setter({
-          loading: false,
-          error: `No disponible: ${missing.map((source) => source.name).join(", ")}. ${point === "all" ? "No se muestra un total incompleto. " : ""}Reintenta la consulta.`,
-        });
-        return;
-      }
-      setter({
-        loading: false,
-        data: point === "all" ? consolidatePanel(metric, rows) : rows[0].data,
-      });
+      if (result.data) cache.current.set(key, result);
+      setter(result.error && previous?.data ? { ...result, data: previous.data, note: "Se conserva la última consulta correcta; no se pudo actualizar." } : result);
     };
-    if (user?.is_admin) void load("sales", setSales);
+    void load("sales", setSales);
     void load("receivables", setCredit);
     void load("top-products", setTop);
     return () => controller.abort();
-  }, [point, period, refresh, user?.is_admin]);
+  }, [point, period, refresh, pointsOfSale, user?.id]);
   const cards = [
-    ...(user?.is_admin
+    ...(canViewSales
       ? [
           {
             label: `Ventas netas ${periodDescription}`,
             value: sales.data ? formatCurrency(sales.data.total) : "—",
             state: sales,
-            href: "/cierre",
+            href: user?.is_admin ? "/cierre" : "/",
             icon: ClipboardCheck,
           },
           {
             label: `Operaciones ${periodDescription}`,
             value: sales.data?.sale_count ?? "—",
             state: sales,
-            href: "/cierre",
+            href: user?.is_admin ? "/cierre" : "/",
             icon: TrendingUp,
           },
         ]
@@ -194,7 +145,7 @@ export function Panel() {
           className="btn-quiet"
           onClick={() => setRefresh((value) => value + 1)}
           disabled={
-            credit.loading || top.loading || (!!user?.is_admin && sales.loading)
+            credit.loading || top.loading || (!!canViewSales && sales.loading)
           }
         >
           <RefreshCw size={16} />
@@ -213,10 +164,10 @@ export function Panel() {
               <card.icon size={22} className="text-brand-500" />
               <p className="mt-4 text-xs text-slate-500">{card.label}</p>
               <p className="mt-2 break-words text-2xl font-bold">
-                {card.state.loading ? "Cargando…" : card.value}
+                {card.state.loading && !card.state.data ? "Cargando…" : card.value}
               </p>
               <p className="mt-2 text-xs text-slate-500">
-                {card.state.error ||
+                {(card.state.error ? (card.state.data ? "Datos anteriores. " : "") + card.state.error : undefined) ||
                   card.state.note ||
                   (card.state.data?.updated_at
                     ? "Actualizado: " +
@@ -241,7 +192,7 @@ export function Panel() {
             </p>
             {top.loading ? (
               <p role="status" className="py-8 text-sm text-slate-500">
-                Consultando ventas…
+                {top.note || "Consultando ventas…"}
               </p>
             ) : top.error ? (
               <p role="alert" className="py-5 text-sm text-amber-600">
@@ -283,11 +234,11 @@ export function Panel() {
           </section>
           <section className="card p-5">
             <h3 className="font-semibold">
-              {user?.is_admin
+              {canViewSales
                 ? `Medios de pago ${periodDescription}`
                 : "Gestiona tu negocio"}
             </h3>
-            {user?.is_admin && (
+            {canViewSales && (
               <div className="mt-5 grid grid-cols-2 gap-3">
                 {[
                   ["cash", "Efectivo"],

@@ -49,7 +49,7 @@ class ReceivablesTest extends TestCase
         Http::fake();
         $this->getJson('/api/points-of-sale/bodega/receivables')->assertUnauthorized();
         $this->getJson('/api/points-of-sale/bodega/receivables/7/credits')->assertUnauthorized();
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $this->getJson('/api/points-of-sale/unknown/receivables')->assertNotFound();
         $this->getJson('/api/points-of-sale/bodega/receivables?page=0')->assertUnprocessable();
         $this->getJson('/api/points-of-sale/bodega/receivables/7/credits?snapshot=invalid')->assertUnprocessable();
@@ -58,7 +58,7 @@ class ReceivablesTest extends TestCase
 
     public function test_all_positive_pending_credits_are_counted_and_details_match(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $this->fake([$this->row(1, 59), $this->row(2, 60), $this->row(3, 61, '100.10'), $this->row(4, 90, '20.20'), $this->row(5, 100, '0'), $this->row(6, 100, '-10')]);
         $summary = $this->getJson('/api/points-of-sale/bodega/receivables')->assertOk()
             ->assertJsonPath('summary.customer_count', 1)->assertJsonPath('summary.sale_count', 4)->assertJsonPath('summary.amount', 320.5)
@@ -83,7 +83,7 @@ class ReceivablesTest extends TestCase
 
     public function test_namesakes_are_resolved_by_sale_customer_id(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake([
             '*/reports/store_account_outstanding*' => Http::response(['limit' => 500, 'data' => ['rows' => [$this->row(1, 61), $this->row(2, 62)]]]),
             '*/customers*' => Http::response([['person_id' => 7, 'first_name' => 'Ana', 'last_name' => 'Pérez'], ['person_id' => 8, 'first_name' => 'Ana', 'last_name' => 'Pérez']], 200, ['x-total-records' => '2']),
@@ -96,7 +96,7 @@ class ReceivablesTest extends TestCase
 
     public function test_report_pagination_and_credit_pagination(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $rows = array_map(fn ($id) => $this->row($id, 61 + $id, '10'), range(1, 25));
         Http::fake([
             '*/sales/*' => fn ($request) => Http::response(['sale_id' => basename(parse_url($request->url(), PHP_URL_PATH)), 'customer_id' => 7, 'total' => '15']),
@@ -112,7 +112,7 @@ class ReceivablesTest extends TestCase
 
     public function test_age_balances_are_cumulative_strict_and_available_for_every_point(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $this->fake(array_map(fn ($age, $id) => $this->row($id, $age, '10.10'), [0, 60, 61, 90, 91, 120, 121], range(1, 7)));
         foreach (array_keys(config('points_of_sale')) as $point) {
             $snapshot = $this->getJson("/api/points-of-sale/$point/receivables")->assertOk()->assertJsonPath('summary.amount', 70.7)->json('snapshot_id');
@@ -134,7 +134,7 @@ class ReceivablesTest extends TestCase
 
     public function test_unavailable_payments_do_not_hide_balances_or_claim_zero_paid(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake([
             '*/reports/store_account_outstanding*' => Http::response(['limit' => 500, 'data' => ['rows' => [$this->row(1, 121)]]]),
             '*/customers*' => Http::response([['person_id' => 7, 'first_name' => 'Ana', 'last_name' => 'Pérez']]),
@@ -150,7 +150,7 @@ class ReceivablesTest extends TestCase
 
     public function test_unavailable_reports_and_malformed_data_are_not_shown_as_zero(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fakeSequence()->push('', 404)->push(['data' => ['rows' => 'invalid']])->push(['data' => ['rows' => [$this->row(1, 90, 'not-money')]], 'limit' => 500]);
         $this->getJson('/api/points-of-sale/villa/receivables')->assertStatus(501)->assertJsonPath('code', 'report_unavailable')->assertJsonMissingPath('summary');
         $this->getJson('/api/points-of-sale/villa/receivables')->assertStatus(501);
@@ -161,7 +161,7 @@ class ReceivablesTest extends TestCase
 
     public function test_empty_cartera_and_sixty_second_cache(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $this->fake([]);
         $this->getJson('/api/points-of-sale/bodega/receivables')->assertOk()->assertJsonPath('summary.amount', 0);
         $this->travel(59)->seconds();
@@ -175,7 +175,7 @@ class ReceivablesTest extends TestCase
     public function test_report_includes_every_credit_not_only_the_current_page(): void
     {
         $this->getJson('/api/points-of-sale/bodega/receivables/7/report')->assertUnauthorized();
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $this->fake(array_map(fn ($id) => $this->row($id, 61 + $id, '10.10'), range(1, 27)));
         $snapshot = $this->getJson('/api/points-of-sale/bodega/receivables')->assertOk()->json('snapshot_id');
         $this->getJson("/api/points-of-sale/bodega/receivables/7/report?snapshot=$snapshot")->assertOk()

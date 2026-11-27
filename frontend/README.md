@@ -5,12 +5,8 @@ Se actualizó Laravel 10 porque Composer bloqueó sus versiones por avisos de se
 
 ## Ejecutar localmente
 
-En dos terminales desde la raíz:
-
-```powershell
-cd backend
-php artisan serve --host=localhost --port=8000
-```
+Activa Apache en XAMPP. La API local se sirve en http://localhost/speedsong/backend/public/api.
+Evita `php artisan serve` para este panel en Windows: sus consultas externas pueden bloquear las demás solicitudes.
 
 ```powershell
 cd frontend
@@ -31,7 +27,7 @@ crea la base, ejecuta `php artisan config:clear` y `php artisan migrate --seed`.
 `frontend/.env`:
 
 ```dotenv
-URL_API_KEY=http://localhost:8000/api
+URL_API_KEY=http://localhost/speedsong/backend/public/api
 ```
 
 Es una URL pública, no un secreto. Vite expone exclusivamente esta variable personalizada.

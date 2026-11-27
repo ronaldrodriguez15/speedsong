@@ -16,6 +16,7 @@ class ReceivablesController extends Controller
     {
         $points = config('points_of_sale');
         abort_unless(array_key_exists($point, $points), 404);
+        abort_unless($request->user()->canAccessPoint($point), 403);
         $data = $request->validate(['search' => ['nullable', 'string', 'max:150'], 'page' => ['nullable', 'integer', 'min:1']]);
         $configuration = $points[$point];
         if (empty($configuration['api_key']) || !filter_var($configuration['url'], FILTER_VALIDATE_URL)
@@ -55,6 +56,7 @@ class ReceivablesController extends Controller
 
     public function credits(Request $request, string $point, string $customer): JsonResponse
     {
+        abort_unless($request->user()->canAccessPoint($point), 403);
         abort_unless(array_key_exists($point, config('points_of_sale')), 404);
         $data = $request->validate(['snapshot' => ['required', 'uuid'], 'page' => ['nullable', 'integer', 'min:1'],
             'tab' => ['nullable', 'in:amount,over_60,over_90,over_120,paid']]);
@@ -88,6 +90,7 @@ class ReceivablesController extends Controller
 
     public function report(Request $request, string $point, string $customer): JsonResponse
     {
+        abort_unless($request->user()->canAccessPoint($point), 403);
         abort_unless(array_key_exists($point, config('points_of_sale')), 404);
         $data = $request->validate(['snapshot' => ['required', 'uuid']]);
         $snapshot = Cache::get("pos-receivables-records-v2:$point:{$data['snapshot']}");

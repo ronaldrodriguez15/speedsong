@@ -28,7 +28,7 @@ class AuthUsersTest extends TestCase
     public function test_admin_crud_search_validation_and_self_protection(): void {
         $admin = $this->admin();
         $this->actingAs($admin);
-        $data = ['name' => 'Nuevo usuario', 'email' => 'nuevo@example.com', 'password' => 'ExamplePass123', 'password_confirmation' => 'ExamplePass123', 'is_admin' => false];
+        $data = ['name' => 'Nuevo usuario', 'email' => 'nuevo@example.com', 'password' => 'ExamplePass123', 'password_confirmation' => 'ExamplePass123', 'is_admin' => false, 'point_ids' => ['bodega', 'villa']];
         $id = $this->postJson('/api/users', $data)->assertCreated()->assertJsonMissingPath('password')->json('id');
         $this->assertTrue(Hash::check('ExamplePass123', User::findOrFail($id)->password));
         $this->getJson('/api/users?search=nuevo')->assertOk()->assertJsonPath('total', 1);

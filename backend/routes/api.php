@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/transfers/products', [\App\Http\Controllers\TransferController::class, 'products'])->middleware('throttle:30,1');
     Route::get('/inventory', [\App\Http\Controllers\InventoryController::class, 'index'])->middleware('throttle:20,1');
     Route::get('/user', fn (Request $request) => $request->user());
     Route::post('/logout', [AuthController::class, 'logout']);

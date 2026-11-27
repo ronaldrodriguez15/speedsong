@@ -14,9 +14,9 @@ class PointOfSaleController extends Controller
 {
     public function sales(Request $request, string $point, PointOfSaleSales $sales): JsonResponse
     {
-        abort_unless($request->user()->is_admin, 403);
         $points = config('points_of_sale');
         abort_unless(array_key_exists($point, $points), 404);
+        abort_unless($request->user()->canAccessPoint($point), 403);
         $today = now('America/Bogota')->startOfDay();
         $data = $request->validate([
             'date' => ['nullable', 'prohibits:period', 'date_format:Y-m-d', 'before_or_equal:'.$today->toDateString()],
@@ -55,7 +55,7 @@ class PointOfSaleController extends Controller
 
     public function records(Request $request, string $point): JsonResponse
     {
-        abort_unless($request->user()->is_admin, 403);
+        abort_unless($request->user()->canAccessPoint($point), 403);
         abort_unless(array_key_exists($point, config('points_of_sale')), 404);
         $data = $request->validate([
             'snapshot' => ['required', 'uuid'],
@@ -79,10 +79,8 @@ class PointOfSaleController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        abort_unless($request->user()->is_admin, 403);
-
         // Report local configuration only. Never expose keys or contact a POS.
-        $points = collect(config('points_of_sale'))->map(function (array $point, string $id) {
+        $points = collect($request->user()->accessiblePoints())->map(function (array $point, string $id) {
             $url = trim((string) ($point['url'] ?? ''));
             $configured = filter_var($url, FILTER_VALIDATE_URL) !== false
                 && parse_url($url, PHP_URL_SCHEME) === 'https'

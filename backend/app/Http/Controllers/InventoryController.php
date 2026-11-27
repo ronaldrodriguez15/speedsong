@@ -20,8 +20,10 @@ class InventoryController extends Controller
         }
         $search = implode(', ', $terms);
         $field = $data['field'];
-        $points = config('points_of_sale');
+        $points = $request->user()->accessiblePoints();
+        abort_unless($points, 403, 'No tienes puntos de venta asignados.');
         $selected = $data['point'] ?? 'all';
+        abort_unless($selected === 'all' || array_key_exists($selected, $points), 403);
         if ($selected !== 'all') $points = [$selected => $points[$selected]];
         foreach ($points as $point) if (empty($point['api_key']) || parse_url($point['url'], PHP_URL_SCHEME) !== 'https') return response()->json(['message' => 'La configuración de las sedes está incompleta.'], 503);
         try {

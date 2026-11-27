@@ -1,17 +1,10 @@
+import { useAllowedPoints } from "./PointOfSaleSelector";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { AllPointsSummary } from './AllPointsSummary';
 import { ArrowDownLeft, ArrowRightLeft, Banknote, CalendarDays, CircleAlert, CreditCard, LoaderCircle, RefreshCw, Smartphone, Store, TrendingUp } from "lucide-react";
 import { api, apiError } from "../services/api";
 import { SalesRecordsModal, type SalesDetailSelection } from "./SalesRecordsModal";
 
-const points = [
-  { id: "all", name: "Todos los puntos" },
-  { id: "bodega", name: "Bodega" },
-  { id: "villa", name: "Villa" },
-  { id: "local", name: "Local" },
-  { id: "bmanga", name: "Bucaramanga" },
-  { id: "cucuta", name: "Cúcuta" },
-] as const;
 
 interface SalesSummary {
   snapshot_id: string;
@@ -37,6 +30,7 @@ const methods = [
 ] as const;
 
 export function PointOfSaleTabs() {
+  const points = [{ id: "all", name: "Todos los puntos" }, ...useAllowedPoints()];
   const [detail, setDetail] = useState<SalesDetailSelection | null>(null);
   const [selected, setSelected] = useState(0);
   const [summary, setSummary] = useState<{ key: string; data: SalesSummary } | null>(null);

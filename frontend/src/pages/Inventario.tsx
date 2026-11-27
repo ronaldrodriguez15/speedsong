@@ -3,10 +3,11 @@ import { Boxes, Download, Search, Loader2, ChevronLeft, ChevronRight } from 'luc
 import { ReferenceSearch } from '../components/ReferenceSearch';
 import { api } from '../services/api';
 import type { InventoryResult } from '../services/inventoryExcel';
-import { pointsOfSale } from '../components/PointOfSaleSelector';
+import { useAllowedPoints } from '../components/PointOfSaleSelector';
 
 const quantity = (n: number | null) => n === null ? 'Sin dato' : n.toLocaleString('es-CO', { maximumFractionDigits: 6 });
 export function Inventario() {
+  const pointsOfSale = useAllowedPoints();
   const [mode, setMode] = useState<'all' | 'search'>('all');
   function changeMode(value: 'all' | 'search') {
     request.current?.abort(); setMode(value); setData(null); setError(''); setLoading(false); setPage(1);

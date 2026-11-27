@@ -1,4 +1,4 @@
-import { Boxes } from "lucide-react";
+import { Boxes, ArrowRightLeft } from "lucide-react";
 import { ChristmasGreeting } from '../ui/ChristmasDecor';
 import { NavLink } from "react-router-dom";
 import { LayoutDashboard, Users, Wallet, TrendingUp, X, LogOut, PanelLeftClose } from "lucide-react";
@@ -18,10 +18,11 @@ interface SidebarProps {
 const navigation = [
   { label: "Panel", path: "/", icon: LayoutDashboard },
   { label: "Inventario", path: "/inventario", icon: Boxes },
-  { label: "Usuarios", path: "/usuarios", icon: Users },
+  { label: "Transferencias", path: "/transferencias", icon: ArrowRightLeft },
   { label: "Cartera", path: "/cartera", icon: Wallet },
   { label: "Cierre", path: "/cierre", icon: ClipboardCheck },
-  { label: "Más vendidos", path: "/mas-vendidos", icon: TrendingUp }
+  { label: "Más vendidos", path: "/mas-vendidos", icon: TrendingUp },
+  { label: "Usuarios", path: "/usuarios", icon: Users },
 ];
 
 export function Sidebar({ open, onClose, onLogout, userName }: SidebarProps) {
@@ -43,7 +44,7 @@ export function Sidebar({ open, onClose, onLogout, userName }: SidebarProps) {
         <div className="px-4 pt-8">
           <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-400">Menú principal</p>
           <nav className="space-y-1">
-            {navigation.filter(item => !["/usuarios", "/cierre"].includes(item.path) || user?.is_admin).map(({ label, path, icon: Icon }) => (
+            {navigation.filter(item => !["/usuarios", "/cierre", "/transferencias"].includes(item.path) || user?.is_admin).map(({ label, path, icon: Icon }) => (
               <NavLink
                 key={path}
                 to={path}

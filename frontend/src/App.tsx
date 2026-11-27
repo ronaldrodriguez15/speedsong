@@ -1,4 +1,5 @@
 import { Inventario } from "./pages/Inventario";
+import { Transferencias } from "./pages/Transferencias";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { MainLayout } from "./components/layout/MainLayout";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
@@ -14,6 +15,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route element={<ProtectedRoute />}>
+        <Route path="/transferencias" element={<MainLayout><Transferencias /></MainLayout>} />
         <Route path="/cierre" element={<MainLayout><Cierre /></MainLayout>} />
         <Route path="/" element={<MainLayout><Panel /></MainLayout>} />
         <Route path="/usuarios" element={<MainLayout><Usuarios /></MainLayout>} />

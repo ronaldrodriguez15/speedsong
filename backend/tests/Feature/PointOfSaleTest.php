@@ -11,11 +11,11 @@ class PointOfSaleTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_only_administrators_can_read_configuration_status(): void
+    public function test_unassigned_users_have_no_points(): void
     {
         $this->getJson('/api/points-of-sale')->assertUnauthorized();
         $this->actingAs(User::factory()->create())
-            ->getJson('/api/points-of-sale')->assertForbidden();
+            ->getJson('/api/points-of-sale')->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_five_points_report_configuration_without_exposing_keys_or_making_requests(): void

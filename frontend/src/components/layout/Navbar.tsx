@@ -1,4 +1,4 @@
-import { Boxes } from "lucide-react";
+import { Boxes, ArrowRightLeft } from "lucide-react";
 import { ChristmasLights } from '../ui/ChristmasDecor';
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -11,10 +11,11 @@ import { ClipboardCheck } from "lucide-react";
 const links = [
   { name: "Panel principal", path: "/", icon: LayoutDashboard },
   { name: "Inventario", path: "/inventario", icon: Boxes },
+  { name: "Transferencias", path: "/transferencias", icon: ArrowRightLeft },
   { name: "Cierre", path: "/cierre", icon: ClipboardCheck },
-  { name: "Usuarios", path: "/usuarios", icon: Users },
   { name: "Cartera", path: "/cartera", icon: Wallet },
   { name: "Más vendidos", path: "/mas-vendidos", icon: TrendingUp },
+  { name: "Usuarios", path: "/usuarios", icon: Users },
 ];
 const reveal = { initial: { opacity: 0, y: -8, scale: .98 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: -5, scale: .98 }, transition: { duration: .18 } };
 export function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
@@ -58,8 +59,8 @@ export function Navbar({ onMenuClick }: { onMenuClick: () => void }) {
         </div>
         <AnimatePresence>{panel === "search" && <motion.div {...reveal} id="module-search" className="dropdown-panel text-slate-800 dark:text-slate-100 left-0 right-0 mt-2 p-2">
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-400">Ir a un módulo</p>
-          {links.filter(link => (!["/usuarios", "/cierre"].includes(link.path) || user?.is_admin) && link.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())).map(({name, path, icon: Icon}) => <Link key={path} to={path} onClick={() => setPanel(null)} className="menu-item"><Icon size={18}/>{name}</Link>)}
-          {!links.some(link => (!["/usuarios", "/cierre"].includes(link.path) || user?.is_admin) && link.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())) && <p className="p-3 text-sm text-slate-500 dark:text-slate-400">No hay módulos que coincidan.</p>}
+          {links.filter(link => (!["/usuarios", "/cierre", "/transferencias"].includes(link.path) || user?.is_admin) && link.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())).map(({name, path, icon: Icon}) => <Link key={path} to={path} onClick={() => setPanel(null)} className="menu-item"><Icon size={18}/>{name}</Link>)}
+          {!links.some(link => (!["/usuarios", "/cierre", "/transferencias"].includes(link.path) || user?.is_admin) && link.name.toLocaleLowerCase().includes(query.toLocaleLowerCase())) && <p className="p-3 text-sm text-slate-500 dark:text-slate-400">No hay módulos que coincidan.</p>}
         </motion.div>}</AnimatePresence>
       </div>
     </div>

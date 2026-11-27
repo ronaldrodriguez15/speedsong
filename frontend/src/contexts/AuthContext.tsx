@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState("");
   const refreshUser = useCallback(async () => { setUser((await api.get<AuthUser>("/user")).data); }, []);
   useEffect(() => {
-    localStorage.removeItem("speedsong_token"); localStorage.removeItem("speedsong_user");
+    try { localStorage.removeItem("speedsong_token"); localStorage.removeItem("speedsong_user"); } catch { /* Cookies handle authentication when storage is blocked. */ }
     const expired = () => setUser(null);
     window.addEventListener("auth:expired", expired);
     const controller = new AbortController();

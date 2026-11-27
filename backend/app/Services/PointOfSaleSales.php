@@ -20,9 +20,12 @@ class PointOfSaleSales
         $seen = [];
         $offset = 0;
         $complete = false;
+        $deadline = microtime(true) + 45;
         for ($page = 0; $page < 20; $page++) {
+            $remaining = $deadline - microtime(true);
+            if ($remaining <= 0) throw new RuntimeException('La consulta de ventas excedió el tiempo de espera. Intenta nuevamente.');
             $response = Http::acceptJson()->withHeaders(['x-api-key' => $point['api_key']])
-                ->connectTimeout(5)->timeout(15)
+                ->connectTimeout(min(5, $remaining))->timeout(min(15, $remaining))
                 ->withOptions(['allow_redirects' => false, 'verify' => config('pos.ca_bundle') ?: true])
                 ->get(rtrim($point['url'], '/').'/index.php/api/v1/sales', [
                     'start_date' => $date.' 00:00:00', 'end_date' => $endDate.' 23:59:59',

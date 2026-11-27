@@ -1,4 +1,4 @@
-import { Boxes } from "lucide-react";
+import { Boxes, ArrowRightLeft } from "lucide-react";
 import { Snowman } from '../ui/ChristmasDecor';
 import { useState, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
@@ -10,6 +10,7 @@ import { ClipboardCheck } from "lucide-react";
 import { LayoutDashboard, Users, Wallet, TrendingUp, ChevronRight } from "lucide-react";
 
 const pageTitles: Record<string, string> = {
+  "/transferencias": "Transferencias",
   "/inventario": "Inventario",
   "/cierre": "Cierre de caja",
   "/": "Panel principal",
@@ -23,7 +24,7 @@ export function MainLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const title = pageTitles[location.pathname] ?? "SpeedSong";
-  const PageIcon = ({ "/inventario": Boxes, "/cierre": ClipboardCheck, "/": LayoutDashboard, "/usuarios": Users, "/cartera": Wallet, "/mas-vendidos": TrendingUp })[location.pathname] ?? LayoutDashboard;
+  const PageIcon = ({ "/transferencias": ArrowRightLeft, "/inventario": Boxes, "/cierre": ClipboardCheck, "/": LayoutDashboard, "/usuarios": Users, "/cartera": Wallet, "/mas-vendidos": TrendingUp })[location.pathname] ?? LayoutDashboard;
 
   return (
     <div className="min-h-screen bg-[#f7faff] dark:bg-slate-950">

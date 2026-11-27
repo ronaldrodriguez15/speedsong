@@ -29,6 +29,7 @@ class UserController extends Controller
         $data = $this->validated($request);
         $user = new User($data);
         $user->is_admin = $data['is_admin'];
+        $user->point_ids = $data['is_admin'] ? [] : $data['point_ids'];
         $user->save();
         return response()->json($user, 201);
     }
@@ -39,6 +40,7 @@ class UserController extends Controller
         if (empty($data['password'])) unset($data['password']);
         $user->fill($data);
         $user->is_admin = $data['is_admin'];
+        $user->point_ids = $data['is_admin'] ? [] : $data['point_ids'];
         $user->save();
         return $user;
     }
@@ -56,6 +58,8 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user?->id)],
             'password' => [$user ? 'nullable' : 'required', 'string', 'max:255', Password::min(8), 'confirmed'],
             'is_admin' => ['required', 'boolean'],
+            'point_ids' => [Rule::requiredIf(!$request->boolean('is_admin')), 'array', 'max:5'],
+            'point_ids.*' => ['required', 'string', 'distinct', Rule::in(array_keys(config('points_of_sale')))],
         ]);
     }
 }

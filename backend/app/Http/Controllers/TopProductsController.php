@@ -14,6 +14,8 @@ class TopProductsController extends Controller
     {
         $points = config('points_of_sale');
         abort_unless($point === 'stores' || array_key_exists($point, $points), 404);
+        $points = $request->user()->accessiblePoints();
+        abort_unless($point === 'stores' || isset($points[$point]), 403);
         $data = $request->validate(['refresh' => ['nullable', 'boolean'], 'period' => ['nullable', 'in:today,yesterday,last7,last30'], 'search' => ['nullable', 'string', 'max:2200']]);
         $terms = collect(preg_split('/[,;\r\n]+/', $data['search'] ?? ''))->map(fn ($term) => mb_strtoupper(trim($term)))->filter(fn ($term) => $term !== '')->unique()->values()->all();
         if (count($terms) > 20 || array_filter($terms, fn ($term) => mb_strlen($term) > 100)) {
@@ -26,6 +28,7 @@ class TopProductsController extends Controller
         $startDate = $start->toDateString();
         $endDate = $end->toDateString();
         $selected = $point === 'stores' ? array_diff_key($points, ['bodega' => true]) : [$point => $points[$point]];
+        abort_unless($selected, 403, 'No tienes puntos de venta asignados.');
         foreach ($selected as $configuration) {
         if (empty($configuration['api_key']) || !filter_var($configuration['url'], FILTER_VALIDATE_URL) || parse_url($configuration['url'], PHP_URL_SCHEME) !== 'https') {
             return response()->json(['message' => 'La configuración de esta sede está incompleta.'], 503);

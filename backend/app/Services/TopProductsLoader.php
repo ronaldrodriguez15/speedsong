@@ -20,14 +20,17 @@ class TopProductsLoader
             if ($cached !== null) { $results[$id] = $cached; continue; }
             $pending[$id] = ['key' => $key, 'offset' => 0, 'seen' => [], 'count' => 0, 'ranking' => new ProductRanking()];
         }
+        $deadline = microtime(true) + 45;
         // Each round fetches the next page of every uncached store concurrently.
         for ($page = 0; $page < 80 && $pending; $page++) {
-            $responses = Http::pool(function (Pool $pool) use ($pending, $points, $start, $end) {
+            $remaining = $deadline - microtime(true);
+            if ($remaining <= 0) throw new RuntimeException('El ranking excedió el tiempo de espera. Intenta nuevamente.');
+            $responses = Http::pool(function (Pool $pool) use ($pending, $points, $start, $end, $remaining) {
                 $requests = [];
                 foreach ($pending as $id => $state) {
                     $point = $points[$id];
                     $requests[] = $pool->as($id)->acceptJson()->withHeaders(['x-api-key' => $point['api_key']])
-                        ->connectTimeout(5)->timeout(15)
+                        ->connectTimeout(min(5, $remaining))->timeout(min(15, $remaining))
                         ->withOptions(['allow_redirects' => false, 'verify' => config('pos.ca_bundle') ?: true])
                         ->get(rtrim($point['url'], '/').'/index.php/api/v1/sales', [
                             'start_date' => $start.' 00:00:00', 'end_date' => $end.' 23:59:59',

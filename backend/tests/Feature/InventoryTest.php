@@ -24,12 +24,12 @@ class InventoryTest extends TestCase
     public function test_authentication_and_validation(): void
     {
         $this->getJson('/api/inventory?field=product_id')->assertUnauthorized();
-        $this->actingAs(User::factory()->create())->getJson('/api/inventory?field=item_id')->assertUnprocessable();
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]))->getJson('/api/inventory?field=item_id')->assertUnprocessable();
         Http::assertNothingSent();
     }
     public function test_matching_references_not_local_ids_pagination_and_cache(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(function ($request) {
             $id = str_contains($request->url(), '/villa/') ? 99 : 1;
             $offset = (int) ($request['offset'] ?? 0);
@@ -46,26 +46,26 @@ class InventoryTest extends TestCase
     }
     public function test_failed_store_never_yields_partial_totals(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn ($r) => str_contains($r->url(), '/villa/') ? Http::response([], 500) : Http::response([], 200));
         $this->getJson('/api/inventory?field=product_id&search=SG')->assertStatus(502)->assertJsonMissingPath('data.rows');
     }
     public function test_barcode_and_missing_quantity(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn () => Http::response([['item_id' => 1, 'name' => 'Product', 'item_number' => '00123', 'locations' => ['1' => ['quantity' => '2.5']]]], 200));
         $this->getJson('/api/inventory?field=item_number&search=00123')->assertOk()->assertJsonPath('data.rows.0.reference', '00123')->assertJsonPath('data.rows.0.total', 12.5);
         Http::assertSent(fn ($r) => $r['search_field'] === 'item_number' && $r['search'] === '00123');
     }
     public function test_missing_quantities_are_rejected(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn () => Http::response([['item_id' => 1, 'name' => 'Product', 'locations' => []]], 200));
         $this->getJson('/api/inventory?field=product_id')->assertStatus(502);
     }
     public function test_empty_search_lists_only_selected_store_and_keeps_individual_products(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn () => Http::response([
             ['item_id' => 1, 'name' => 'First', 'product_id' => 'SAME', 'locations' => ['1' => ['quantity' => 3]]],
             ['item_id' => 2, 'name' => 'Second', 'product_id' => 'SAME', 'locations' => ['1' => ['quantity' => 4]]],
@@ -81,7 +81,7 @@ class InventoryTest extends TestCase
     }
     public function test_hidden_records_are_filtered_before_pagination_and_export(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $items = array_map(fn ($id) => ['item_id' => $id, 'name' => 'Product', 'product_id' => "SKU $id", 'locations' => ['1' => ['quantity' => 2]]], range(1, 26));
         $items[] = ['item_id' => 27, 'name' => ' Ninguno ', 'product_id' => 'OTHER'];
         $items[] = ['item_id' => 28, 'name' => 'Placeholder', 'product_id' => 'NINGUNO'];
@@ -100,13 +100,13 @@ class InventoryTest extends TestCase
     }
     public function test_unreported_quantity_is_not_treated_as_zero(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn () => Http::response([['item_id' => 1, 'name' => 'Product', 'product_id' => 'SG', 'locations' => ['1' => ['quantity' => null]]]], 200));
         $this->getJson('/api/inventory?field=product_id')->assertOk()->assertJsonPath('data.rows.0.total', null)->assertJsonPath('data.rows.0.quantities.bodega', null);
     }
     public function test_consolidated_pages_use_cached_complete_totals_and_export_all_rows(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn ($request) => $this->paged($request, array_map(fn ($n) => ['item_id' => $n, 'name' => "Product $n", 'product_id' => "SKU $n", 'locations' => ['1' => ['quantity' => 2]]], range(1, 30))));
         $this->getJson('/api/inventory?field=product_id')->assertOk()->assertJsonCount(10, 'data.rows')->assertJsonPath('data.total', null)->assertJsonPath('data.rows.0.total', 10);
         $this->getJson('/api/inventory?field=product_id&page=2')->assertOk()->assertJsonCount(10, 'data.rows');
@@ -116,7 +116,7 @@ class InventoryTest extends TestCase
 
     public function test_multiple_references_merge_overlapping_results_without_double_counting(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(function ($request) {
             $ids = $request['search'] === 'SG' ? range(1, 30) : [1];
             return $this->paged($request, array_map(fn ($id) => ['item_id' => $id, 'name' => "Product $id", 'product_id' => "SG $id", 'locations' => ['1' => ['quantity' => 2]]], $ids));
@@ -135,7 +135,7 @@ class InventoryTest extends TestCase
 
     public function test_multiple_barcodes_preserve_leading_zeroes_and_reject_oversized_lists(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn ($request) => Http::response([['item_id' => $request['search'], 'name' => 'Product', 'item_number' => $request['search'], 'locations' => ['1' => ['quantity' => 1]]]], 200, ['x-total-records' => '1']));
         $this->getJson('/api/inventory?field=item_number&point=local&search=00123,00456')->assertOk()->assertJsonCount(2, 'data.rows')->assertJsonPath('data.rows.0.reference', '00123');
         Http::assertSent(fn ($request) => $request['search'] === '00456' && $request['search_field'] === 'item_number');
@@ -146,14 +146,14 @@ class InventoryTest extends TestCase
 
     public function test_failure_of_one_reference_does_not_return_partial_results(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         Http::fake(fn ($request) => $request['search'] === 'B' ? Http::response([], 503) : Http::response([], 200));
         $this->getJson('/api/inventory?field=product_id&point=local&search=A,B')->assertStatus(502)->assertJsonMissingPath('data');
     }
 
     public function test_first_page_reads_small_blocks_and_cached_pages_make_no_requests(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $items = array_map(fn ($id) => ['item_id' => $id, 'name' => "Product $id", 'product_id' => sprintf('SKU %04d', $id), 'locations' => ['1' => ['quantity' => 2]]], range(1, 1000));
         Http::fake(fn ($request) => $this->paged($request, $items));
         $url = '/api/inventory?field=product_id';
@@ -171,7 +171,7 @@ class InventoryTest extends TestCase
 
     public function test_reference_totals_include_duplicates_across_remote_page_boundaries(): void
     {
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->create(['point_ids' => array_keys(config('points_of_sale'))]));
         $items = array_map(fn ($id) => ['item_id' => $id, 'name' => 'Product', 'product_id' => $id <= 12 ? 'A' : 'B', 'locations' => ['1' => ['quantity' => 1]]], range(1, 13));
         Http::fake(fn ($request) => $this->paged($request, $items));
         $this->getJson('/api/inventory?field=product_id')->assertOk()->assertJsonCount(2, 'data.rows')
